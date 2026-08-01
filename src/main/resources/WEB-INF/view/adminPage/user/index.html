@@ -51,6 +51,7 @@
 						<th>姓名</th>
 						<th>登录名</th>
 						<th>类型</th>
+						<th>允许登录</th>
 						<th>状态</th>
 						<th>操作</th>
 					</tr>
@@ -70,6 +71,15 @@
 								管理員
 							</#if>
 						</td>
+						<td>	
+							<#if userExt.allowLogin == 1>
+								<span class="green">是</span>
+							</#if>
+							<#if userExt.allowLogin == 0>
+								<span class="red">否</span>
+							</#if>
+						</td>
+						
 						<td>	
 							<#if userExt.open == 0>
 								<span class="green">启用</span>
@@ -136,6 +146,17 @@
 						</select>
 					</div>
 				</div>
+				
+				<div class="layui-form-item">
+					<label class="layui-form-label">允许登录</label>
+					<div class="layui-input-block">
+						<select name="allowLogin" id="allowLogin">
+							<option value="0" >否</option>
+							<option value="1" >是</option>
+						</select>
+					</div>
+				</div>
+				
 				
 				<div class="layui-form-item">
 					<label class="layui-form-label">状态</label>

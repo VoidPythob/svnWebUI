@@ -29,6 +29,18 @@ public class User extends BaseModel {
 	@InitValue("0")
 	Integer open;
 
+	// 允许登录 0:否 1:是
+	@InitValue("1")
+	Integer allowLogin;
+	
+
+	public Integer getAllowLogin() {
+		return allowLogin;
+	}
+
+	public void setAllowLogin(Integer allowLogin) {
+		this.allowLogin = allowLogin;
+	}
 
 	public Integer getOpen() {
 		return open;

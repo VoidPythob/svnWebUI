@@ -48,7 +48,9 @@ public class LoginController extends BaseController {
 		if (user == null) {
 			return renderError("登录失败,请检查用户名密码");
 		}
-
+		if (user.getAllowLogin() != 1) {
+			return renderError("该用户禁止登录后台");
+		}
 		if (user.getOpen() != 0) {
 			return renderError("该用户已停用");
 		}

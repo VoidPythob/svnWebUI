@@ -28,6 +28,7 @@ import com.cym.sqlhelper.utils.ConditionAndWrapper;
 import com.cym.sqlhelper.utils.ConditionOrWrapper;
 import com.cym.sqlhelper.utils.SqlHelper;
 import com.cym.utils.BeanExtUtil;
+import com.cym.utils.SystemTool;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.resource.ClassPathResource;
@@ -88,6 +89,10 @@ public class RepositoryService {
 					RuntimeUtil.execForStr("cmd", "/c", homeConfig.home + "subversion/bin/svnadmin.exe create " + dir);
 				} else {
 					RuntimeUtil.execForStr("svnadmin create " + dir);
+					if (SystemTool.inDocker()) {
+						// 授权apache可以访问仓库文件
+						RuntimeUtil.execForStr("chown -R apache:apache /home/svnWebUI/repo"); 
+					}
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);

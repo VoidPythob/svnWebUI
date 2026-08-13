@@ -114,6 +114,8 @@ public class InitConfig {
 			httpdUtils.releaseFile();
 			// 修改端口号配置文件
 			httpdUtils.modHttpdPort(settingService.get("port"));
+			// 授权apache可以访问仓库文件
+			RuntimeUtil.execForStr("chown -R apache:apache /home/svnWebUI/repo"); 
 		}
 
 		// 服务端先杀掉启动

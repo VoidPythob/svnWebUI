@@ -5,6 +5,7 @@ import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.List;
 
+import com.cym.utils.*;
 import org.noear.solon.annotation.Controller;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Mapping;
@@ -18,10 +19,6 @@ import org.tmatesoft.svn.core.wc.SVNWCUtil;
 
 import com.cym.ext.TreeNode;
 import com.cym.model.User;
-import com.cym.utils.BaseController;
-import com.cym.utils.JsonResult;
-import com.cym.utils.PathUtls;
-import com.cym.utils.SvnAdminUtils;
 
 import cn.hutool.core.net.URLDecoder;
 import cn.hutool.core.net.URLEncodeUtil;
@@ -104,6 +101,15 @@ public class SelectRootController extends BaseController {
 
 	@Mapping("download")
 	public void download(String url, Context context) throws SVNException, IOException {
+		handleFile(url, context, false);
+	}
+
+	@Mapping("preview")
+	public void preview(String url, Context context) throws SVNException, IOException {
+		handleFile(url, context, true);
+	}
+
+	private void handleFile(String url, Context context, boolean inline) throws SVNException, IOException {
 		User user = getLoginUser();
 
 		String userName = user.getName();
@@ -120,11 +126,16 @@ public class SelectRootController extends BaseController {
 		svnRepository.setAuthenticationManager(authManager);
 
 		String fileName = getFileName(url);
+		String contentType = MimeUtils.getContentType(fileName);
 
-		context.headerAdd("Accept-Ranges", "bytes");
-		context.headerAdd("Content-Type", "application/octet-stream");
-		context.headerAdd("Content-Disposition", "attachment;filename=" + URLEncodeUtil.encode(fileName, Charset.forName("UTF-8")));
+		context.headerSet("Accept-Ranges", "bytes");
+		context.headerSet("Content-Type", contentType);
+
+		String disposition = inline ? "inline" : "attachment";
+		context.headerAdd("Content-Disposition",
+				disposition + ";filename=" + URLEncodeUtil.encode(fileName, Charset.forName("UTF-8")));
+
 		svnRepository.getFile(pathUtls.getRelativePath(url), -1, null, context.outputStream());
-
 	}
+
 }

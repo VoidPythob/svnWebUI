@@ -271,20 +271,217 @@ function selectRootOver() {
 	layer.close(rootSelect.index);
 }
 
+function getSelectedFileNode() {
+    var nodes = rootSelect.zTreeObj.getSelectedNodes();
+    if (nodes.length === 0 || nodes[0].isParent) {
+        layer.msg("请先选择一个文件");
+        return null;
+    }
+
+    return nodes[0];
+}
 
 function download() {
-	var nodes = rootSelect.zTreeObj.getSelectedNodes();
-	if (nodes.length > 0) {
-		if (nodes[0].isParent) {
-			layer.msg("目录不可下载");
-			return;
-		}
+    var node = getSelectedFileNode();
+    if (!node) return;
 
-		window.open(ctx + '/adminPage/selectRoot/download?url=' + encodeURIComponent(nodes[0].id));
-	} else {
-		layer.msg("未选中文件");
-	}
+    window.open(ctx + '/adminPage/selectRoot/download?url=' + encodeURIComponent(node.id));
 }
+
+
+function getExt(fileName) {
+    var i = fileName.lastIndexOf(".");
+    return i > -1 ? fileName.substring(i + 1).toLowerCase() : "";
+}
+
+function isTextLike(contentType, ext) {
+    if (contentType.indexOf("text/") === 0) return true;
+    if (contentType.indexOf("application/json") === 0) return true;
+    if (contentType.indexOf("application/xml") === 0) return true;
+    if (contentType.indexOf("application/javascript") === 0) return true;
+
+    var textExts = [
+        "txt", "log", "md", "markdown",
+        "java", "js", "ts", "css", "html", "htm", "xml", "json",
+        "sql", "sh", "bat", "py", "php", "c", "cpp", "h", "hpp",
+        "yml", "yaml", "properties", "ini", "conf", "vue", "jsx", "tsx"
+    ];
+    return textExts.indexOf(ext) > -1;
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+    });
+}
+
+
+function showImagePreview(blobUrl, fileName) {
+    layer.open({
+        type: 1,
+        title: '预览 - ' + fileName,
+        area: ['900px', '650px'],
+        content: '<div style="height:100%;display:flex;align-items:center;justify-content:center;background:#2b2b2b;">' +
+                 '<img src="' + blobUrl + '" style="max-width:100%;max-height:100%;"></div>',
+        end: function() { URL.revokeObjectURL(blobUrl); }
+    });
+}
+
+function showIframePreview(blobUrl, fileName) {
+    layer.open({
+        type: 1,
+        title: '预览 - ' + fileName,
+        area: ['900px', '650px'],
+        content: '<iframe src="' + blobUrl + '" style="width:100%;height:100%;border:0;"></iframe>',
+        end: function() { URL.revokeObjectURL(blobUrl); }
+    });
+}
+
+function showVideoPreview(blobUrl, fileName) {
+    layer.open({
+        type: 1,
+        title: '预览 - ' + fileName,
+        area: ['900px', '650px'],
+        content: '<div style="height:100%;display:flex;align-items:center;justify-content:center;background:#000;">' +
+                 '<video src="' + blobUrl + '" controls style="max-width:100%;max-height:100%;"></video></div>',
+        end: function() { URL.revokeObjectURL(blobUrl); }
+    });
+}
+
+function showAudioPreview(blobUrl, fileName) {
+    layer.open({
+        type: 1,
+        title: '预览 - ' + fileName,
+        area: ['500px', '150px'],
+        content: '<div style="height:100%;display:flex;align-items:center;justify-content:center;">' +
+                 '<audio src="' + blobUrl + '" controls style="width:90%;"></audio></div>',
+        end: function() { URL.revokeObjectURL(blobUrl); }
+    });
+}
+
+function showTextPreview(blob, blobUrl, fileName, ext) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var text = e.target.result;
+        var html;
+
+        if (ext === 'md' || ext === 'markdown') {
+            html = renderMarkdown(text);
+        } else if (ext === 'txt' || ext === 'log') {
+            html = renderPlainText(text);
+        } else {
+            html = renderCode(text, ext);
+        }
+
+        layer.open({
+            type: 1,
+            title: '预览 - ' + fileName,
+            area: ['1200px', '700px'],
+            content: html,
+            end: function() { URL.revokeObjectURL(blobUrl); }
+        });
+    };
+    reader.readAsText(blob, "UTF-8");
+}
+
+function renderMarkdown(text) {
+    marked.setOptions({
+        highlight: function(code, lang) {
+            if (lang && hljs.getLanguage(lang)) {
+                return hljs.highlight(code, { language: lang }).value;
+            }
+            return hljs.highlightAuto(code).value;
+        },
+        langPrefix: 'hljs language-'
+    });
+    return `<div class="md-preview">${marked.parse(text)}</div>`;
+}
+
+function renderPlainText(text) {
+    var lines = text.split(/\r\n|\r|\n/);
+    var numbers = '';
+    for (var i = 1; i <= lines.length; i++) numbers += i + '\n';
+
+    return '<div class="code-wrap">'
+         +   '<div class="code-ln">' + numbers + '</div>'
+         +   '<pre class="code-content">' + escapeHtml(text) + '</pre>'
+         + '</div>';
+}
+
+function renderCode(text, ext) {
+    var langMap = {
+        'js': 'javascript', 'ts': 'typescript', 'jsx': 'javascript', 'tsx': 'typescript',
+        'java': 'java', 'py': 'python', 'php': 'php',
+        'css': 'css', 'html': 'xml', 'htm': 'xml', 'xml': 'xml', 'vue': 'xml',
+        'json': 'json', 'sql': 'sql', 'sh': 'bash', 'bat': 'dos',
+        'yml': 'yaml', 'yaml': 'yaml', 'properties': 'ini', 'ini': 'ini', 'conf': 'ini',
+        'c': 'c', 'cpp': 'cpp', 'h': 'cpp', 'hpp': 'cpp'
+    };
+    var lang = langMap[ext] || null;
+
+    var highlighted;
+    if (lang && hljs.getLanguage(lang)) {
+        highlighted = hljs.highlight(text, { language: lang }).value;
+    } else {
+        highlighted = hljs.highlightAuto(text).value;
+    }
+
+    var lines = text.split(/\r\n|\r|\n/);
+    var numbers = '';
+    for (var i = 1; i <= lines.length; i++) numbers += i + '\n';
+
+    return '<div class="code-wrap">'
+         +   '<div class="code-ln">' + numbers + '</div>'
+         +   '<pre class="code-content"><code class="hljs">' + highlighted + '</code></pre>'
+         + '</div>';
+}
+
+function preview() {
+    var node = getSelectedFileNode();
+    if (!node) return;
+
+    var url = decodeURIComponent(node.id);
+    var fileName = url.substring(url.lastIndexOf("/") + 1);
+
+    var loading = layer.load();
+
+    fetch(ctx + '/adminPage/selectRoot/preview?url=' + encodeURIComponent(node.id))
+        .then(function(res) {
+            var contentType = res.headers.get("Content-Type") || "";
+            return res.blob().then(function(blob) {
+                return { blob: blob, contentType: contentType };
+            });
+        })
+        .then(function(result) {
+            layer.close(loading);
+
+            var blob = result.blob;
+            var contentType = result.contentType;
+            var blobUrl = URL.createObjectURL(blob);
+            var ext = getExt(fileName);
+
+            if (contentType.indexOf("image/") === 0) {
+                showImagePreview(blobUrl, fileName);
+            } else if (contentType.indexOf("application/pdf") === 0) {
+                showIframePreview(blobUrl, fileName);
+            } else if (contentType.indexOf("video/") === 0) {
+                showVideoPreview(blobUrl, fileName);
+            } else if (contentType.indexOf("audio/") === 0) {
+                showAudioPreview(blobUrl, fileName);
+            } else if (isTextLike(contentType, ext)) {
+                showTextPreview(blob, blobUrl, fileName, ext);
+            } else {
+                URL.revokeObjectURL(blobUrl);
+                layer.msg("该文件类型不支持预览，请下载查看");
+            }
+        })
+        .catch(function(e) {
+            layer.close(loading);
+            console.log(e);
+            layer.alert("出错了,请联系技术人员!");
+        });
+}
+
 
 function copyUrl() {
 	var textArea = document.createElement("textarea");

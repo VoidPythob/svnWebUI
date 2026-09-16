@@ -477,8 +477,8 @@ function preview() {
         })
         .catch(function(e) {
             layer.close(loading);
-            console.log(e);
             layer.alert("出错了,请联系技术人员!");
+			throw e;
         });
 }
 

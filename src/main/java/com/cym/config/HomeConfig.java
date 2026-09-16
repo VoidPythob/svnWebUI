@@ -39,8 +39,10 @@ public class HomeConfig {
 		}
 
 		// windows 加上盘符,并释放Apache-Subversion.zip
-		if (SystemTool.isWindows() && !home.contains(":")) {
-			home = JarUtil.getCurrentFilePath().split(":")[0] + ":" + home;
+		if (SystemTool.isWindows()) {
+			if (!home.contains(":")) {
+				home = JarUtil.getCurrentFilePath().split(":")[0] + ":" + home;
+			}
 
 			if (!FileUtil.exist(home + "/subversion/bin/svnserve.exe")) {
 				ClassPathResource resource = new ClassPathResource("file/subversion.zip");
@@ -54,11 +56,12 @@ public class HomeConfig {
 
 		// 如果最后没有/, 加上/
 		home = ToolUtils.endDir(ToolUtils.handlePath(home));
+		logger.info("svnWebUI主目录为 {}", home);
 
 		// 检查路home权限
 		if (!FilePermissionUtil.canWrite(new File(home))) {
-			logger.error(home + " " + "directory does not have writable permission. Please specify it again.");
-			logger.error(home + " " + "目录没有可写权限,请重新指定.");
+            logger.error("{} directory does not have writable permission. Please specify it again.", home);
+            logger.error("{} 目录没有可写权限,请重新指定.", home);
 			System.exit(1);
 		}
 	}
